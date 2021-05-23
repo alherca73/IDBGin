@@ -9,7 +9,7 @@ Data.raw<-read.csv(here("Crops/Eta_Crops.csv"))
 Deptos<-read.csv(here("Crops/deptonames.csv"))
 Data.work<-full_join(Data.raw, Deptos, by = c("DEPTOS"="CodDepto"))
 
-## Leaving "Pastos/Cultivos" as the difference from the RISOMA fraction
+# Selecting everything that is not No cultivos and Pastos/cultivos as they are processed later in the script
 
 target<-c("No Cultivos","Pastos/Cultivos")
 Data.work1<- Data.work%>%
@@ -18,21 +18,46 @@ Data.work1<- Data.work%>%
 
 # Replacing "Agricultura Tecnificada" with "Banana" in the following provinces
 target2<-c("COLON", "CORTES", "ATLANTIDA","YORO")
+target3<-c("Agricultura Tecnificada","Musácea")
 Data.work2<-Data.work1 %>% 
-  mutate(CLCROP = replace(CLCROP, CLCROP == "Agricultura Tecnificada" & Name %in% target2, "Banana"))
+  mutate(CLCROP = replace(CLCROP, CLCROP %in% target3 & Name %in% target2, "Banana"))
 
-#Data.work2<-Data.work2 %>% 
-#  mutate(CLCROP = replace(CLCROP, CLCROP == "Pastos/Cultivos", "Pastos"))
+# Convert arrozales in Intibuca to Agricultura Tecnificada
+Data.work2<-Data.work2 %>% 
+  mutate(CLCROP = replace(CLCROP, CLCROP == "Arrozales" & Name == "INTIBUCA", "Agricultura Tecnificada"))
 
-target3<-c("Pastos/Cultivos")
+# Getting summaries per province by crop
+Sumario<- Data.work2 %>%
+  group_by(Name, CLCROP) %>%
+  summarise( areatot = sum(Count))
+########################################
+########################################
+
+target4<-c("Pastos/Cultivos")
 Data.work3<- Data.work%>%
-  filter(CLCROP %in% target3 & ETA !=10 )
+  filter(CLCROP %in% target4 & ETA !=10 )
 
 Data.work3$INVRISOMA<-1-(Data.work3$RISOMA)
 
 Data.work3$APastos<-(Data.work3$Count*Data.work3$INVRISOMA)
 
 Data.work3$ARISOMA<-(Data.work3$Count*Data.work3$RISOMA)
+
+# Getting summaries per province by pastos / cereales IFPRI
+Sumario.pastocereal<- Data.work3 %>%
+  group_by(Name) %>%
+  summarise( Pastizales = sum(APastos), Cereales = sum(ARISOMA))
+
+
+
+
+
+
+
+
+
+
+
 
 Data.work3<-Data.work3 %>% 
 #  mutate(CLCROP = replace(CLCROP, CLCROP == "Pastos/Cultivos", "Pastos"))
